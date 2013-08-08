@@ -4,7 +4,7 @@ source 'https://rubygems.org'
 gem 'rails', '4.0.0'
 
 gem 'devise'
-gem 'rails-perftest'
+gem 'benchmark_suite', :require => false
 
 # Use sqlite3 as the database for Active Record
 gem 'sqlite3'
