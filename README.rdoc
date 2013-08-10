@@ -15,3 +15,10 @@ $ rake -f perf.rake test
 # For iterations per second
 
 $ rake -f perf.rake test_ips
+
+== Environment variables
+
+* RAILS_ENV
+* KO1TEST_CNT
+* KO1TEST_PATH
+
