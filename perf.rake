@@ -3,12 +3,16 @@
 require 'application'
 require 'benchmark/ips'
 
+TEST_CNT  = (ENV['KO1TEST_CNT'] || 1_000).to_i
+TEST_PATH = ENV['KO1TEST_PATH'] || '/'
+
 Ko1TestApp::Application.initialize!
 
 class NullLog
   def write str
   end
 end
+$null_logger = NullLog.new
 
 def rackenv path
   {
@@ -29,7 +33,7 @@ def rackenv path
     "HTTP_ACCEPT"       => "*/*",
     "rack.version"      => [1, 1],
     "rack.input"        => StringIO.new,
-    "rack.errors"       => NullLog.new,
+    "rack.errors"       => $null_logger,
     "rack.multithread"  => true,
     "rack.multiprocess" => false,
     "rack.run_once"     => false,
@@ -39,17 +43,20 @@ def rackenv path
   }
 end
 
+def do_test_task app
+  _, _, body = app.call(rackenv(TEST_PATH))
+  body.each { |_| }
+  body.close
+end
+
 task :test do
   app = Ko1TestApp::Application.instance
   app.app
 
-  N = 1000
   Benchmark.bm { |x|
-    x.report("#{N} requests") {
-      N.times {
-        _, _, body = app.call(rackenv('/'))
-        body.each { |_| }
-        body.close
+    x.report("#{TEST_CNT} requests") {
+      TEST_CNT.times {
+        do_test_task(app)
       }
     }
   }
@@ -61,9 +68,7 @@ task :test_ips do
 
   Benchmark.ips do |x|
     x.report("requsts") {
-      _, _, body = app.call(rackenv('/'))
-      body.each { |_| }
-      body.close
+      do_test_task(app)
     }
   end
 end
