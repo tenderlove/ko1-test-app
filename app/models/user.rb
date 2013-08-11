@@ -4,4 +4,9 @@ class User < ActiveRecord::Base
   # :lockable, :timeoutable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable
+
+  # hack to generate passwords in fixtures
+  def self.encrypt password
+    new.send :password_digest, password
+  end
 end
