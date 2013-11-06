@@ -43,8 +43,10 @@ def rackenv path
   }
 end
 
+TESTENV = rackenv TEST_PATH
+
 def do_test_task app
-  _, _, body = app.call(rackenv(TEST_PATH))
+  _, _, body = app.call(TESTENV)
   body.each { |_| }
   body.close
 end
@@ -60,6 +62,32 @@ task :test do
       }
     }
   }
+end
+
+task :once do
+  app = Ko1TestApp::Application.instance
+  app.app
+  do_test_task app
+end
+
+task :gc do
+  app = Ko1TestApp::Application.instance
+  app.app
+
+  GC::Profiler.enable
+  TEST_CNT.times { do_test_task(app) }
+  GC::Profiler.report
+  GC::Profiler.disable
+end
+
+task :allocated_objects do
+  app = Ko1TestApp::Application.instance
+  app.app
+  do_test_task(app)
+  puts "start dtrace #{$$}"
+  $stdin.gets
+  TEST_CNT.times { do_test_task(app) }
+  puts "end"
 end
 
 task :test_ips do
