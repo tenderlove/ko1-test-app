@@ -94,7 +94,7 @@ task :test_ips do
   app = Ko1TestApp::Application.instance
   app.app
 
-  Benchmark.ips do |x|
+  Benchmark.ips(10) do |x|
     x.report("requsts") {
       do_test_task(app)
     }
