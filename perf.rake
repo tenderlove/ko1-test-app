@@ -7,6 +7,9 @@ TEST_CNT  = (ENV['KO1TEST_CNT'] || 1_000).to_i
 TEST_PATH = ENV['KO1TEST_PATH'] || '/'
 
 Ko1TestApp::Application.initialize!
+ActiveRecord::Migrator.migrations_paths = ActiveRecord::Tasks::DatabaseTasks.migrations_paths
+ActiveRecord::Migration.verbose = true
+ActiveRecord::Migrator.migrate(ActiveRecord::Migrator.migrations_paths, nil)
 
 class NullLog
   def write str
@@ -80,7 +83,7 @@ task :gc do
   GC::Profiler.disable
 end
 
-task :allocated_objects do
+task :allocated_objects_dtrace do
   app = Ko1TestApp::Application.instance
   app.app
   do_test_task(app)
@@ -88,6 +91,21 @@ task :allocated_objects do
   $stdin.gets
   TEST_CNT.times { do_test_task(app) }
   puts "end"
+end
+
+task :allocated_objects do
+  app = Ko1TestApp::Application.instance
+  app.app
+  do_test_task(app)
+  GC.start
+  GC.disable
+  start = ObjectSpace.count_objects
+  TEST_CNT.times { do_test_task(app) }
+  finish = ObjectSpace.count_objects
+  GC.enable
+  finish.each do |k,v|
+    p k => (v - start[k]) / TEST_CNT.to_f
+  end
 end
 
 task :test_ips do
