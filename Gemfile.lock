@@ -128,7 +128,7 @@ PLATFORMS
 DEPENDENCIES
   benchmark_suite
   coffee-rails (~> 4.0.0)
-  devise
+  devise (= 3.0.1)
   jbuilder (~> 1.2)
   jquery-rails
   rails (= 4.0.0)
