@@ -1,7 +1,13 @@
 source 'https://rubygems.org'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '4.0.0'
+rails_version = '4.0.0'
+if ENV['KO1RAILS_VER']
+  rails_version = ENV['KO1RAILS_VER']
+elsif ENV['KO1RAILS_SHA']
+  rails_version = { :github => 'rails/rails', :ref => ENV['KO1RAILS_SHA'] }
+end
+gem 'rails', rails_version
 
 gem 'devise', '3.0.1'
 gem 'benchmark_suite', :require => false
