@@ -5,6 +5,8 @@ require 'benchmark/ips'
 
 TEST_CNT  = (ENV['KO1TEST_CNT'] || 1_000).to_i
 TEST_PATH = ENV['KO1TEST_PATH'] || '/'
+TEST_VER  = ENV['KO1RAILS_SHA'] || Rails::VERSION::STRING
+TEST_JSON = ENV['KO1JSON_FILE'] || "results.json"
 
 Ko1TestApp::Application.initialize!
 ActiveRecord::Migrator.migrations_paths = ActiveRecord::Tasks::DatabaseTasks.migrations_paths
@@ -54,17 +56,41 @@ def do_test_task app
   body.close
 end
 
+def record_results path, results = {}
+  info = begin
+    JSON.parse(File.read(TEST_JSON))
+  rescue
+    {}
+  end
+
+  # Traverse the JSON document to find or create the path
+  node = info
+  path.each do |n|
+    node[n.to_s] ||= {}
+    node = node[n.to_s]
+  end
+  # Set the results, overwriting what was there (if anything)
+  node.merge! results
+  # Save the time just in case
+  node["timestamp"] = Time.now.iso8601
+
+  # Write the results to the file
+  File.open(TEST_JSON, "w+") { |file| file.write info.to_json }
+end
+
 task :test do
   app = Ko1TestApp::Application.instance
   app.app
 
-  Benchmark.bm { |x|
+  bm = Benchmark.bm { |x|
     x.report("#{TEST_CNT} requests") {
       TEST_CNT.times {
         do_test_task(app)
       }
     }
   }
+
+  record_results [TEST_VER, "test:#{TEST_PATH}:#{TEST_CNT}"], bm.first.as_json
 end
 
 task :once do
@@ -80,7 +106,11 @@ task :gc do
   GC::Profiler.enable
   TEST_CNT.times { do_test_task(app) }
   GC::Profiler.report
+  data = { gc_count: GC.count, total_time: GC::Profiler.total_time,
+           result: GC::Profiler.result }
   GC::Profiler.disable
+
+  record_results [TEST_VER, "gc:#{TEST_PATH}"], data
 end
 
 task :allocated_objects_dtrace do
@@ -112,9 +142,11 @@ task :test_ips do
   app = Ko1TestApp::Application.instance
   app.app
 
-  Benchmark.ips(10) do |x|
-    x.report("requsts") {
+  bm = Benchmark.ips(10) do |x|
+    x.report("requests") {
       do_test_task(app)
     }
   end
+
+  record_results [TEST_VER, "ips:#{TEST_PATH}"], bm.first.as_json
 end
